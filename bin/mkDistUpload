@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# make, distr, upload
+
+for p in uu-cco*
+do
+  echo ${p}
+  cd ${p}
+  cabal configure
+  cabal build
+  cabal sdist
+  dist=`ls dist/${p}-*.tar.gz`
+  echo ${dist}
+  if [ -r ${dist} ]
+  then
+    cabal upload --username=AtzeDijkstra ${dist}
+  fi
+  cd ..
+done
