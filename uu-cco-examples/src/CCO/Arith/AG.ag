@@ -1,0 +1,20 @@
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  CCO.Arith.AG
+-- Copyright   :  (c) 2008 Utrecht University
+-- License     :  All rights reserved
+--
+-- Maintainer  :  stefan@cs.uu.nl
+-- Stability   :  provisional
+-- Portability :  portable
+--
+-- Attribute grammar for simple arithmetic expressions.
+--
+-------------------------------------------------------------------------------
+
+module {CCO.Arith.AG} {} {}
+
+include "AG/Base.ag"
+include "AG/Evaluation.ag"
+include "AG/Pos.ag"
+include "AG/Printing.ag"

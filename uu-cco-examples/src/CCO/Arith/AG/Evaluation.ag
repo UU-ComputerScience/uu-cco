@@ -1,0 +1,61 @@
+imports
+{
+import CCO.Feedback         (Feedback, errorMessage)
+import CCO.Printing         (wrapped, showable, Printable (pp))
+import CCO.SourcePos        (Source (..), Pos (..), SourcePos (..))
+import CCO.Tree             (ATerm (App), Tree (fromTree, toTree))
+import CCO.Tree.Parser      (parseTree, app, arg)
+import Control.Applicative  ((<$>))
+import Control.Monad        (when)
+}
+
+-------------------------------------------------------------------------------
+-- Syntax
+-------------------------------------------------------------------------------
+
+{
+-- | Type of values.
+data Val = VNum Num_  -- ^ Numeral.
+
+instance Tree Val where
+  fromTree (VNum n) = App "Num" [fromTree n]
+  toTree = parseTree [app "Num" (VNum <$> arg)]
+
+instance Printable Val where
+  pp (VNum n) = showable n  
+}
+
+-------------------------------------------------------------------------------
+-- Evaluation
+-------------------------------------------------------------------------------
+
+attr Tm Tm_
+  syn val :: {Feedback Val}
+
+sem Tm_
+  | Num lhs.val = return (VNum @n)
+  | Add lhs.val = do VNum n1 <- @t1.val
+                     VNum n2 <- @t2.val
+                     return (VNum (n1 + n2))
+  | Sub lhs.val = do VNum n1 <- @t1.val
+                     VNum n2 <- @t2.val
+                     return (VNum (if n2 > n1 then 0 else (n1 - n2)))
+  | Mul lhs.val = do VNum n1 <- @t1.val
+                     VNum n2 <- @t2.val
+                     return (VNum (n1 * n2))
+  | Div lhs.val = do VNum n1 <- @t1.val
+                     VNum n2 <- @t2.val
+                     when (n2 == 0) (errDivByZero @lhs.pos)
+                     return (VNum (n1 `div` n2))
+
+-------------------------------------------------------------------------------
+-- Run-time errors
+-------------------------------------------------------------------------------
+
+{
+-- | Produces a division-by-zero error.
+errDivByZero :: SourcePos -> Feedback ()
+errDivByZero pos =
+  errorMessage . wrapped $
+  describeSourcePos pos ++ ": Run-time error: division by zero."
+}

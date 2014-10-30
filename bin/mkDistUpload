@@ -4,14 +4,19 @@
 
 # config:
 hackageUsername="AtzeDijkstra"
+cabalFlagsConfigure="--cabal-lib-version=1.16.0.3"
+
+set -xv
 
 for p in uu-cco*
 do
   echo "=========================== ${p}"
   cd ${p}
-  cabal configure
+  cabal clean
+  cabal configure ${cabalFlagsConfigure}
   cabal build
   cabal sdist
+  dist/setup/setup sdist
   dist=`ls dist/${p}-*.tar.gz`
   echo ${dist}
   if [ -r ${dist} ]

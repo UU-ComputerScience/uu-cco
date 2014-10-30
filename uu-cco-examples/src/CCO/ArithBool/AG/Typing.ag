@@ -1,0 +1,135 @@
+imports
+{
+import CCO.Printing
+import CCO.SourcePos        (SourcePos)
+import CCO.Tree             (ATerm (App), Tree (fromTree, toTree))
+import CCO.Tree.Parser      (parseTree, app)
+import Control.Applicative  (Applicative (pure))
+}
+
+-------------------------------------------------------------------------------
+-- Syntax
+-------------------------------------------------------------------------------
+
+{
+-- | Type of types.
+-- Join-semilattice with greatest element 'Top'.
+data Ty = Nat | Bool | Top deriving (Eq, Show)
+
+instance Tree Ty where
+  fromTree Nat  = App "Nat"  []
+  fromTree Bool = App "Bool" []
+  fromTree Top  = App "Top"  []
+
+  toTree = parseTree [ app "Nat"  (pure Nat )
+                     , app "Bool" (pure Bool)
+                     , app "Top"  (pure Top )
+                     ]
+
+-- | Retrieves whether two 'Ty's match.
+-- Two 'Ty's match if they are the same or if one of them is 'Top'.
+match :: Ty -> Ty -> Bool
+match Top _   = True
+match _ Top   = True
+match ty1 ty2 = ty1 == ty2
+
+-- | Retrieves the least upper bound of two 'Ty's.
+lub :: Ty -> Ty -> Ty
+lub ty1 ty2 = if ty1 == ty2 then ty1 else Top
+}
+
+-------------------------------------------------------------------------------
+-- Typing
+-------------------------------------------------------------------------------
+
+attr Tm Tm_
+  syn ty                   :: {Ty}
+  syn tyErrs use {++} {[]} :: {[TyErr]} 
+
+sem Tm_
+  | Num              lhs.ty = Nat
+  | False_ True_     lhs.ty = Bool
+  | If               lhs.ty = @t2.ty `lub` @t3.ty
+  | Add Sub Mul Div  lhs.ty = Nat
+  | Lt Eq Gt         lhs.ty = Bool
+
+sem Tm_
+  | If lhs.tyErrs = @t1.tyErrs ++ @t2.tyErrs ++ @t3.tyErrs ++
+                    checkTyGuard @t1.pos @t1.ty ++
+                    checkTyBranches @t3.pos @t2.ty @t3.ty
+
+{
+-- | Checks the type of the guard of a conditional.
+checkTyGuard :: SourcePos -> Ty -> [TyErr]
+checkTyGuard _   ty | ty `match` Bool = []
+checkTyGuard pos ty                   = [TyErr pos descr Bool ty]
+  where
+    descr = "guard of a conditional should be a boolean"
+
+-- | Checks that both branches of a conditional have the same type.
+checkTyBranches :: SourcePos -> Ty -> Ty -> [TyErr]
+checkTyBranches pos tyThen tyElse
+  | tyThen `match` tyElse = []
+  | otherwise             = [TyErr pos descr tyThen tyElse]
+  where
+    descr = "branches of a conditional should have the same type"
+}
+
+sem Tm_
+  | Add Sub Mul Div  lhs.tyErrs = @t1.tyErrs ++ @t2.tyErrs ++
+                                  checkTyArithOp @t1.pos @t1.ty ++
+                                  checkTyArithOp @t2.pos @t2.ty
+
+{
+-- | Checks the type of an operand of an arithmetic operator.
+checkTyArithOp :: SourcePos -> Ty -> [TyErr]
+checkTyArithOp _   ty | ty `match` Nat  = []
+checkTyArithOp pos ty                   = [TyErr pos descr Nat ty]
+  where
+    descr = "operand of an arithmetic operator should be a natural number"
+}
+
+sem Tm_
+  | Lt Eq Gt  lhs.tyErrs = @t1.tyErrs ++ @t2.tyErrs ++
+                           checkTyRelOp @t1.pos @t1.ty ++
+                           checkTyRelOp @t2.pos @t2.ty
+
+{
+-- | Checks the type of an operand of a relational operator.
+checkTyRelOp :: SourcePos -> Ty -> [TyErr]
+checkTyRelOp _   ty | ty `match` Nat = []
+checkTyRelOp pos ty                  = [TyErr pos descr Nat ty]
+  where
+    descr = "operand of a relational operator should be a natural number"
+}
+
+-------------------------------------------------------------------------------
+-- Type errors
+-------------------------------------------------------------------------------
+
+{
+-- | Type of type errors.
+data TyErr
+  = TyErr SourcePos String Ty Ty  -- ^ Holds a source position, a description,
+                                  --   the expected type and the inferred
+                                  --   type.
+
+instance Printable TyErr where
+  pp = ppTyErr
+}
+
+-------------------------------------------------------------------------------
+-- Pretty printing type errors
+-------------------------------------------------------------------------------
+
+{
+-- | Pretty prints a type error message.
+ppTyErr :: TyErr -> Doc
+ppTyErr (TyErr pos descr expected inferred)
+  = above [ppHeader, text " ", ppExpected, ppInferred]
+  where
+    ppHeader   = wrapped $
+                 describeSourcePos pos ++ ": Type error: " ++ descr ++ "."
+    ppExpected = text "? expected : " >|< showable expected
+    ppInferred = text "? inferred : " >|< showable inferred
+}

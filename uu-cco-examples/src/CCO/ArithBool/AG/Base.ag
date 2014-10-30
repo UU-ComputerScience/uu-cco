@@ -1,0 +1,29 @@
+imports
+{
+import CCO.SourcePos  (SourcePos)
+}
+
+-------------------------------------------------------------------------------
+-- Syntax
+-------------------------------------------------------------------------------
+
+{
+-- | Type of numerals.
+type Num_ = Int
+}
+
+data Tm
+  | Tm  pos :: {SourcePos}  t :: Tm_
+
+data Tm_
+  | Num     n :: {Num_}
+  | False_
+  | True_
+  | If      t1 :: Tm  t2 :: Tm  t3 :: Tm
+  | Add     t1 :: Tm  t2 :: Tm
+  | Sub     t1 :: Tm  t2 :: Tm
+  | Mul     t1 :: Tm  t2 :: Tm
+  | Div     t1 :: Tm  t2 :: Tm
+  | Lt      t1 :: Tm  t2 :: Tm
+  | Eq      t1 :: Tm  t2 :: Tm
+  | Gt      t1 :: Tm  t2 :: Tm

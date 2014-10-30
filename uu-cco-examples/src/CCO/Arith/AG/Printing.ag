@@ -1,0 +1,51 @@
+imports
+{
+import CCO.Printing
+}
+
+-------------------------------------------------------------------------------
+-- Pretty printing
+-------------------------------------------------------------------------------
+
+attr Tm Tm_
+  syn pp :: Doc
+
+sem Tm_
+  | Num lhs.pp = showable @n
+  | Add lhs.pp = ppInfix @lhs.prec ("+", 6) @t1.pp @t2.pp
+  | Sub lhs.pp = ppInfix @lhs.prec ("-", 6) @t1.pp @t2.pp
+  | Mul lhs.pp = ppInfix @lhs.prec ("*", 7) @t1.pp @t2.pp
+  | Div lhs.pp = ppInfix @lhs.prec ("/", 7) @t1.pp @t2.pp  
+
+-------------------------------------------------------------------------------
+-- Precedence levels
+-------------------------------------------------------------------------------
+
+{
+-- | Type of precedence levels.
+type Prec = Int
+}
+
+attr Tm Tm_
+  inh prec :: Int
+
+sem Tm_
+  | Add Sub t1.prec = 6
+            t2.prec = 7
+  | Mul Div t1.prec = 7
+            t2.prec = 8  
+
+{
+-- | Pretty prints, given the precedence level of its immediate context, a term
+-- constructed from a binary operator of a specified precedence level.
+-- 
+-- A term is enclosed in parentheses if the precedence level of its operator 
+-- is less than the precedence level of the enclosing context.
+
+ppInfix :: Prec -> (String, Prec) -> Doc -> Doc -> Doc
+ppInfix ctx (op, prec) l r = modifier $
+                             l >#< ppOp >#< r
+  where
+    modifier = if prec < ctx then parens else id
+    ppOp     = text op
+}

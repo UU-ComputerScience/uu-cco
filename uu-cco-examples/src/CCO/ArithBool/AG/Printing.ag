@@ -1,0 +1,88 @@
+imports
+{
+import CCO.Printing
+}
+
+-------------------------------------------------------------------------------
+-- Pretty printing
+-------------------------------------------------------------------------------
+
+attr Tm Tm_
+  syn pp :: Doc
+
+sem Tm_
+  | Num     lhs.pp = showable @n
+  | False_  lhs.pp = text "false"
+  | True_   lhs.pp = text "true"
+
+sem Tm_
+  | If  lhs.pp = ppIf @t1.pp @t2.pp @t3.pp
+
+{
+-- | Pretty prints a conditional.
+ppIf :: Doc -> Doc -> Doc -> Doc
+ppIf guard then_ else_ = singleLine >//< multiLine >//< indented
+  where
+    singleLine = ppIf_ >#< guard >#<
+                 ppThen >#< then_ >#<
+                 ppElse >#< else_ >#<
+                 ppFi
+    multiLine  = ppIf_ >|< text "   " >|< guard >-<
+                 ppThen >#< then_ >-<
+                 ppElse >#< else_ >-<
+                 ppFi
+    indented   = ppIf_ >-< indent 2 guard >-<
+                 ppThen >-< indent 2 then_ >-<
+                 ppElse >-< indent 2 else_ >-<
+                 ppFi
+    ppIf_      = text "if"
+    ppThen     = text "then"
+    ppElse     = text "else"
+    ppFi       = text "fi"
+}
+
+sem Tm_
+  | Add  lhs.pp = ppInfix @lhs.prec ("+" , 6) @t1.pp @t2.pp
+  | Sub  lhs.pp = ppInfix @lhs.prec ("-" , 6) @t1.pp @t2.pp
+  | Mul  lhs.pp = ppInfix @lhs.prec ("*" , 7) @t1.pp @t2.pp
+  | Div  lhs.pp = ppInfix @lhs.prec ("/" , 7) @t1.pp @t2.pp
+  | Lt   lhs.pp = ppInfix @lhs.prec ("<" , 4) @t1.pp @t2.pp  
+  | Eq   lhs.pp = ppInfix @lhs.prec ("==", 4) @t1.pp @t2.pp
+  | Gt   lhs.pp = ppInfix @lhs.prec (">" , 4) @t1.pp @t2.pp  
+
+-------------------------------------------------------------------------------
+-- Precedence levels
+-------------------------------------------------------------------------------
+
+{
+-- | Type of precedence levels.
+type Prec = Int
+}
+
+attr Tm Tm_
+  inh prec :: Int
+
+sem Tm_
+  | If       t1.prec = 0
+             t2.prec = 0
+             t3.prec = 0
+  | Add Sub  t1.prec = 6
+             t2.prec = 7
+  | Mul Div  t1.prec = 7
+             t2.prec = 8
+  | Lt Eq Gt t1.prec = 4
+             t2.prec = 4 
+
+{
+-- | Pretty prints, given the precedence level of its immediate context, a term
+-- constructed from a binary operator of a specified precedence level.
+-- 
+-- A term is enclosed in parentheses if the precedence level of its operator 
+-- is less than the precedence level of the enclosing context.
+
+ppInfix :: Prec -> (String, Prec) -> Doc -> Doc -> Doc
+ppInfix ctx (op, prec) l r = modifier $ l >#< ppOp >#< r
+  where
+    modifier = if prec < ctx then parens else id
+    ppOp     = text op
+}

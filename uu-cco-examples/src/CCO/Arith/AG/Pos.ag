@@ -1,0 +1,32 @@
+imports
+{
+import CCO.SourcePos  (SourcePos)
+}
+
+-------------------------------------------------------------------------------
+-- Source positions
+-------------------------------------------------------------------------------
+
+attr Tm_
+  inh pos :: {SourcePos}
+
+sem Tm
+  | Tm t.pos = @pos
+
+-------------------------------------------------------------------------------
+-- Utilities
+-------------------------------------------------------------------------------
+
+{
+-- | Retrieves a textual description of a 'SourcePos'.
+describeSourcePos :: SourcePos -> String
+describeSourcePos (SourcePos (File file) (Pos ln col))
+                                                 = file ++
+                                                   ":line " ++ show ln ++
+                                                   ":column " ++ show col
+describeSourcePos (SourcePos (File file) EOF)    = file ++
+                                                   ":<at end of file>"
+describeSourcePos (SourcePos Stdin (Pos ln col)) = "line " ++ show ln ++
+                                                   ":column " ++ show col
+describeSourcePos (SourcePos Stdin EOF)          = "<at end of input>"
+}

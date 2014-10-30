@@ -1,0 +1,6 @@
+file : "src/CCO/ArithBool/AG.ag"
+options : catas, semfuns, signatures, pretty, data, haskellsyntax, wrappers
+
+file : "src/CCO/Arith/AG.ag"
+options : catas, semfuns, signatures, pretty, data, haskellsyntax, wrappers
+

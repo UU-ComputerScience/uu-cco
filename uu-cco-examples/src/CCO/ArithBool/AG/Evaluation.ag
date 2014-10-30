@@ -1,0 +1,147 @@
+imports
+{
+import CCO.Feedback         (Feedback, errorMessage)
+import CCO.Printing
+import CCO.SourcePos        (Source (..), Pos (..), SourcePos (..))
+import CCO.Tree             (ATerm (App), Tree (fromTree, toTree))
+import CCO.Tree.Parser      (parseTree, app, arg)
+import Control.Applicative  (Applicative (pure), (<$>))
+import Control.Monad        (when, unless)
+}
+
+-------------------------------------------------------------------------------
+-- Syntax
+-------------------------------------------------------------------------------
+
+{
+-- | Type of values.
+data Val
+  = VNum Num_  -- ^ Numeral.
+  | VFalse     -- ^ False.
+  | VTrue      -- ^ True.
+
+instance Tree Val where
+  fromTree (VNum n) = App "Num"   [fromTree n]
+  fromTree VFalse   = App "False" []
+  fromTree VTrue    = App "True"  []
+
+  toTree = parseTree [ app "Num"   (VNum <$> arg)
+                     , app "False" (pure VFalse)
+                     , app "True"  (pure VTrue)
+                     ]
+
+instance Printable Val where
+  pp (VNum n) = showable n
+  pp VFalse   = text "false"
+  pp VTrue    = text "true"
+
+-- | Retrieves whether a 'Val' is a 'VNum'.
+isVNum :: Val -> Bool
+isVNum (VNum _) = True
+isVNum _        = False
+
+-- | Retrieves whether a 'Val' is 'VFalse'.
+isVFalse :: Val -> Bool
+isVFalse VFalse = True
+isVFalse _      = False
+
+-- | Retrieves whether a 'Val' is 'VTrue'.
+isVTrue :: Val -> Bool
+isVTrue VTrue = True
+isVTrue _     = False
+
+-- | Retrieves whether a 'Val' is either 'VFalse' or 'VTrue'.
+isBool :: Val -> Bool
+isBool v = isVFalse v || isVTrue v
+
+-- | Retrieves a textual description of the type of a 'Val'.
+describeTy :: Val -> String
+describeTy (VNum _) = "natural number"
+describeTy VFalse   = "boolean"
+describeTy VTrue    = "boolean"
+}
+
+-------------------------------------------------------------------------------
+-- Evaluation
+-------------------------------------------------------------------------------
+
+attr Tm Tm_
+  syn val :: {Feedback Val}
+
+sem Tm_
+  | Num    lhs.val = return (VNum @n)
+  | False_ lhs.val = return VFalse
+  | True_  lhs.val = return VTrue
+  | If     lhs.val = matchBool @t1.pos @t1.val @t2.val @t3.val
+  | Add    lhs.val = do n1 <- matchNat @t1.pos @t1.val 
+                        n2 <- matchNat @t2.pos @t2.val
+                        return (VNum (n1 + n2))
+  | Sub    lhs.val = do n1 <- matchNat @t1.pos @t1.val 
+                        n2 <- matchNat @t2.pos @t2.val
+                        return (VNum (if n2 > n1 then 0 else n1 - n2))
+  | Mul    lhs.val = do n1 <- matchNat @t1.pos @t1.val 
+                        n2 <- matchNat @t2.pos @t2.val
+                        return (VNum (n1 * n2))
+  | Div    lhs.val = do n1 <- matchNat @t1.pos @t1.val
+                        n2 <- matchNat @t2.pos @t2.val
+                        when (n2 == 0) (errDivByZero @lhs.pos)
+                        return (VNum (n1 `div` n2))
+  | Lt     lhs.val = do n1 <- matchNat @t1.pos @t1.val
+                        n2 <- matchNat @t2.pos @t2.val
+                        return (if n1 < n2 then VTrue else VFalse)
+  | Eq     lhs.val = do n1 <- matchNat @t1.pos @t1.val
+                        n2 <- matchNat @t2.pos @t2.val
+                        return (if n1 == n2 then VTrue else VFalse)
+  | Gt     lhs.val = do n1 <- matchNat @t1.pos @t1.val
+                        n2 <- matchNat @t2.pos @t2.val
+                        return (if n1 > n2 then VTrue else VFalse)
+
+-------------------------------------------------------------------------------
+-- Run-time type checking
+-------------------------------------------------------------------------------
+
+{
+-- | Checks whether a 'Val' is a numeral.
+-- If the check succeeds, the numeral is returned; if not, a run-time type
+-- error is issued.
+matchNat :: SourcePos -> Feedback Val -> Feedback Num_
+matchNat pos fv = do
+  v@(~(VNum n)) <- fv
+  unless (isVNum v) (errTyMismatch pos "natural number" (describeTy v))
+  return n
+
+-- | Checks whether a 'Val' is a boolean constant.
+-- If the check succeeds, one of two continuations (for 'VTrue' and 'VFalse',
+-- respectively) is selected; if not, a run-time type error is issued.
+matchBool :: SourcePos -> Feedback Val -> Feedback a -> Feedback a ->
+             Feedback a
+matchBool pos fv ft ff = do
+  v <- fv
+  unless (isBool v) (errTyMismatch pos "boolean" (describeTy v))
+  case v of
+    VFalse -> ff
+    VTrue  -> ft
+}
+
+-------------------------------------------------------------------------------
+-- Run-time errors
+-------------------------------------------------------------------------------
+
+{
+-- | Produces a division-by-zero error.
+errDivByZero :: SourcePos -> Feedback ()
+errDivByZero pos =
+  errorMessage . wrapped $
+  describeSourcePos pos ++ ": Run-time error: division by zero."
+
+-- | Given a source position, a textual description of the expected type, and
+-- a textual description of the actual type, produces a run-time type error.
+errTyMismatch :: SourcePos -> String -> String -> Feedback ()
+errTyMismatch pos expected encountered
+   = errorMessage (ppHeader >-< text " " >-< ppExpected >-< ppEncountered)
+  where
+    ppHeader      = wrapped $
+                    describeSourcePos pos ++ ": Run-time error: type mismatch."
+    ppExpected    = text "? expected    : " >|< wrapped expected
+    ppEncountered = text "? encountered : " >|< wrapped encountered
+}
