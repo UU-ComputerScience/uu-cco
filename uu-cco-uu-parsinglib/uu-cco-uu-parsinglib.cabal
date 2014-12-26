@@ -1,5 +1,5 @@
 name:                  uu-cco-uu-parsinglib
-version:               0.1.0.1
+version:               0.1.0.2
 synopsis:              Utilities for compiler construction: Feedback wrapper around parser in uu-parsinglib
 description:           A small utility library accompanying the course on
                        Compiler Construction (INFOMCCO) at Utrecht Univerity.

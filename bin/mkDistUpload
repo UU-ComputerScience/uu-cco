@@ -15,8 +15,12 @@ do
   cabal clean
   cabal configure ${cabalFlagsConfigure}
   cabal build
-  cabal sdist
-  dist/setup/setup sdist
+  if [ -x dist/setup/setup sdist ]
+  then
+    dist/setup/setup sdist
+  else
+    cabal sdist
+  fi
   dist=`ls dist/${p}-*.tar.gz`
   echo ${dist}
   if [ -r ${dist} ]
