@@ -36,6 +36,8 @@ module CCO.Feedback (
 import CCO.Feedback.Message
 import CCO.Printing          (Doc, text)
 import System.IO             (Handle)
+import Control.Monad
+import Control.Applicative
 
 -------------------------------------------------------------------------------
 -- The Feedback monad
@@ -60,6 +62,10 @@ instance Monad Feedback where
   Fail msgs      >>= _ = Fail msgs
 
   fail msg             = Fail [Error (text msg)]
+
+instance Applicative Feedback where
+  pure = return
+  (<*>) = ap
 
 -- | Issues a list of 'Message's.
 -- Fails if the list contains an 'Error' message.
