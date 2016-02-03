@@ -100,9 +100,12 @@ printer = arr (render_ 79 . pp)
 -- | Wraps a 'Component' into a program that provides it with input from the
 -- standard input channel and relays its output to the standard output channel.
 ioWrap :: Component String String -> IO ()
-ioWrap (C f) = do
-  input  <- getContents
+ioWrap c = getContents >>= ioRun c >>= putStrLn >> exitWith ExitSuccess
+
+-- | Run a 'Component' in the 'IO' monad. 
+ioRun :: Component a b -> a -> IO b 
+ioRun (C f) input = do
   result <- runFeedback (f input) 1 1 stderr
   case result of
     Nothing     -> exitFailure
-    Just output -> putStrLn output >> exitWith ExitSuccess
+    Just output -> return output
