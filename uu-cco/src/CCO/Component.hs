@@ -27,6 +27,7 @@ module CCO.Component (
 
     -- * Wrapping components
   , ioWrap       -- :: Component String String -> IO ()
+  , ioRun        -- :: Component a b -> a -> IO b
 ) where
 
 import CCO.Feedback     (Feedback, runFeedback)
