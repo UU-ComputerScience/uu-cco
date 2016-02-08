@@ -1,5 +1,5 @@
 name:                  uu-cco
-version:               0.1.0.3
+version:               0.1.0.5
 synopsis:              Utilities for compiler construction: core functionality
 description:           A small utility library accompanying the course on
                        Compiler Construction (INFOMCCO) at Utrecht Univerity.
