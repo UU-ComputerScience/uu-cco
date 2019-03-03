@@ -29,6 +29,7 @@ module CCO.Printing.Printer (
   ) where
 
 import CCO.Printing.Colour                ( Colour (..) )
+import Data.Semigroup                     ( Semigroup (..) )
 import Data.Monoid                        ( Monoid (..) )
 import System.Console.ANSI                ( ConsoleLayer (Foreground)
                                           , ColorIntensity (Dull)
@@ -93,6 +94,9 @@ class Monoid a => Printer a where
 -- | The type of printers that produce 'String's.
 data StringPrinter = SP !Int !Int (String -> String)
 
+instance Semigroup StringPrinter where
+  (<>) = mappend
+
 instance Monoid StringPrinter where
   mempty = SP 0 0 id
   mappend (SP wl hl accl) (SP wr hr accr) =
@@ -115,6 +119,9 @@ printToString (SP _ _ acc) = acc ""
 
 -- | The type of printers that print to the standard output channel.
 data IOPrinter = IOP !Int !Int ([Colour] -> (IO (), [Colour]))
+
+instance Semigroup IOPrinter where
+  (<>) = mappend
 
 instance Monoid IOPrinter where
   mempty                              = IOP 0 0 (\cs -> (return (), cs))
