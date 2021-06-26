@@ -61,6 +61,7 @@ instance Monad Feedback where
                            Fail msgs'      -> Fail (msgs ++ msgs')
   Fail msgs      >>= _ = Fail msgs
 
+instance MonadFail Feedback where
   fail msg             = Fail [Error (text msg)]
 
 instance Applicative Feedback where
